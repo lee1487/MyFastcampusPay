@@ -1,0 +1,24 @@
+plugins {
+	id 'java'
+}
+
+group 'com.fastcampuspay.common'
+version 'unspecified'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+}
+
+test {
+	useJUnitPlatform()
+}
+
+// Spring Boot 플러그인이 상위에서 적용되어 bootJar가 생기는 경우를 대비
+tasks.named("bootJar") { enabled = false }
+tasks.named("jar") { enabled = true }
