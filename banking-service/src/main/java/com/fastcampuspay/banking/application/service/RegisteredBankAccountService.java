@@ -6,6 +6,7 @@ import com.fastcampuspay.banking.adapter.out.persistence.RegisteredBankAccountJp
 import com.fastcampuspay.banking.adapter.out.persistence.RegisteredBankAccountMapper;
 import com.fastcampuspay.banking.application.port.in.RegisteredBankAccountCommand;
 import com.fastcampuspay.banking.application.port.in.RegisteredBankAccountUseCase;
+import com.fastcampuspay.banking.application.port.out.FindBankAccountPort;
 import com.fastcampuspay.banking.application.port.out.RegisteredBankAccountPort;
 import com.fastcampuspay.banking.application.port.out.RequestBankAccountInfoPort;
 import com.fastcampuspay.banking.domain.RegisteredBankAccount;
@@ -20,6 +21,7 @@ import javax.transaction.Transactional;
 public class RegisteredBankAccountService implements RegisteredBankAccountUseCase {
     private final RegisteredBankAccountPort registeredBankAccountPort;
     private final RegisteredBankAccountMapper registeredBankAccountMapper;
+    private final FindBankAccountPort findBankAccountPort;
 
     private final RequestBankAccountInfoPort requestBankAccountInfoPort;
 
@@ -44,6 +46,16 @@ public class RegisteredBankAccountService implements RegisteredBankAccountUseCas
         // 2. 등록가능한 계좌라면, 등록한다. 성공하면, 등록에 성공한 등록 정보를 리턴
         // 2-1. 등록가능하지 않은 계좌라면, 에러를 리턴
         if (accountIsValid) {
+            // bankAccountNumber 중복 확인
+            boolean isDuplicate = findBankAccountPort.existsByBankAccountNumber(
+                    new RegisteredBankAccount.BankAccountNumber(command.getBankAccountNumber())
+            );
+            
+            if (isDuplicate) {
+                // 중복된 계좌번호인 경우 null 반환
+                return null;
+            }
+            
             RegisteredBankAccountJpaEntity jpaEntity = registeredBankAccountPort.createRegisteredBankAccount(
                     new RegisteredBankAccount.MembershipId(command.getMembershipId()),
                     new RegisteredBankAccount.BankName(command.getBankName()),
