@@ -9,6 +9,8 @@ import com.fastcampuspay.banking.application.port.in.RegisteredBankAccountUseCas
 import com.fastcampuspay.banking.application.port.out.FindBankAccountPort;
 import com.fastcampuspay.banking.application.port.out.RegisteredBankAccountPort;
 import com.fastcampuspay.banking.application.port.out.RequestBankAccountInfoPort;
+import com.fastcampuspay.banking.application.port.out.membership.GetMembershipPort;
+import com.fastcampuspay.banking.application.port.out.membership.MembershipStatus;
 import com.fastcampuspay.banking.domain.RegisteredBankAccount;
 import com.fastcampuspay.common.UseCase;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +24,8 @@ public class RegisteredBankAccountService implements RegisteredBankAccountUseCas
     private final RegisteredBankAccountPort registeredBankAccountPort;
     private final RegisteredBankAccountMapper registeredBankAccountMapper;
     private final FindBankAccountPort findBankAccountPort;
-
     private final RequestBankAccountInfoPort requestBankAccountInfoPort;
+    private final GetMembershipPort getMembershipPort;
 
     @Override
     public RegisteredBankAccount registerBankAccount(RegisteredBankAccountCommand command) {
@@ -32,6 +34,11 @@ public class RegisteredBankAccountService implements RegisteredBankAccountUseCas
         // command.getMembershipId()
 
         // (멤버 서비스도 확인?) 여기서는 skip
+        // call membership service, 정상인지 확인
+        MembershipStatus membershipStatus = getMembershipPort.getMembership(command.getMembershipId());
+        if (!membershipStatus.isValid()) {
+            return null;
+        }
 
         // 1. 외부 살제 은행에 등록이 가능한 계좌인지(정상인지) 확인한다.
         // 외부 은행에 이 계좌가 정상인지? 확인해야 한다.
