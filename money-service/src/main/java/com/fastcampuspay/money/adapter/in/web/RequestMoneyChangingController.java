@@ -42,5 +42,17 @@ public class RequestMoneyChangingController {
         return MoneyChangingResultDetail.mapFromMoneyChangingRequest(moneyChangingRequest);
     }
 
+    @PostMapping(path = "/money/increase/async")
+    MoneyChangingResultDetail increseMoneyChangingRequestAsync(@RequestBody IncreaseMoneyChangingRequest request) {
+        IncreaseMoneyRequestCommand command = IncreaseMoneyRequestCommand.builder()
+                .targetMembershipId(request.getTargetMembershipId())
+                .amount(request.getAmount())
+                .build();
+
+        MoneyChangingRequest moneyChangingRequest = increaseMoneyRequestUseCase.increaseMoneyRequestAsync(command);
+
+        return MoneyChangingResultDetail.mapFromMoneyChangingRequest(moneyChangingRequest);
+    }
+
 
 }
