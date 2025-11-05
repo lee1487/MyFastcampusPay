@@ -38,3 +38,4 @@ out/
 
 **/.env
 /db/
+/axon-server-se/

@@ -1,4 +1,4 @@
-FROM openjdk:11-slim-stretch
+FROM openjdk:11.0.10-jdk-slim
 EXPOSE 8080
 ARG JAR_FILE
 COPY ${JAR_FILE} app.jar
