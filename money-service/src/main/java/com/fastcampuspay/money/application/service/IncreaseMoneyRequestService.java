@@ -7,9 +7,11 @@ import com.fastcampuspay.common.UseCase;
 import com.fastcampuspay.common.task.CountDownLatchManager;
 import com.fastcampuspay.common.task.RechargingMoneyTask;
 import com.fastcampuspay.common.task.SubTask;
+import com.fastcampuspay.money.adapter.axon.command.IncreaseMemberMoneyCommand;
 import com.fastcampuspay.money.adapter.out.persistence.MemberMoneyJpaEntity;
 import com.fastcampuspay.money.adapter.out.persistence.MoneyChangingRequestJpaEntity;
 import com.fastcampuspay.money.adapter.out.persistence.MoneyChangingRequestMapper;
+import com.fastcampuspay.money.application.port.in.GetMemberMoneyPort;
 import com.fastcampuspay.money.application.port.in.IncreaseMoneyRequestCommand;
 import com.fastcampuspay.money.application.port.in.IncreaseMoneyRequestUseCase;
 import com.fastcampuspay.money.application.port.out.IncreaseMoneyPort;
@@ -19,6 +21,7 @@ import com.fastcampuspay.money.application.port.out.membership.MembershipStatus;
 import com.fastcampuspay.money.domain.MemberMoney;
 import com.fastcampuspay.money.domain.MoneyChangingRequest;
 import lombok.RequiredArgsConstructor;
+import org.axonframework.commandhandling.gateway.CommandGateway;
 
 import javax.transaction.Transactional;
 import java.util.ArrayList;
@@ -34,6 +37,8 @@ public class IncreaseMoneyRequestService implements IncreaseMoneyRequestUseCase 
     private final GetMembershipPort membershipPort;
     private final MoneyChangingRequestMapper moneyChangingRequestMapper;
     private final IncreaseMoneyPort increaseMoneyPort;
+    private final GetMemberMoneyPort getMemberMoneyPort;
+    private final CommandGateway commandGateway;
 
 
     @Override
@@ -152,5 +157,98 @@ public class IncreaseMoneyRequestService implements IncreaseMoneyRequestUseCase 
             return null;
         }
 
+    }
+
+    @Override
+    public void increaseMoneyRequestByEvent(IncreaseMoneyRequestCommand command) {
+        MemberMoneyJpaEntity memberMoneyJpaEntity = getMemberMoneyPort.getMemberMoney(
+                new MemberMoney.MembershipId(command.getTargetMembershipId())
+        );
+
+        String aggregateIdentifier = memberMoneyJpaEntity.getAggregateIdentifier();
+
+        // aggregateIdentifier가 없으면 새로 생성
+        if (aggregateIdentifier == null || aggregateIdentifier.isEmpty()) {
+            createAggregateAndIncrease(memberMoneyJpaEntity, command);
+        } else {
+            // aggregateIdentifier가 있으면 시도하되, Event Store에 없으면 재생성
+            sendIncreaseMoneyCommand(aggregateIdentifier, memberMoneyJpaEntity, command);
+        }
+    }
+
+    private void createAggregateAndIncrease(MemberMoneyJpaEntity memberMoneyJpaEntity, IncreaseMoneyRequestCommand command) {
+        System.out.println("Creating new Aggregate for membershipId: " + command.getTargetMembershipId());
+        
+        commandGateway.send(new com.fastcampuspay.money.adapter.axon.command.MemberMoneyCreatedCommand(
+                command.getTargetMembershipId()
+        )).whenComplete((createResult, createThrowable) -> {
+            if (createThrowable != null) {
+                System.err.println("Failed to create MemberMoney Aggregate");
+                createThrowable.printStackTrace();
+                throw new RuntimeException("Failed to create MemberMoney Aggregate", createThrowable);
+            } else {
+                System.out.println("MemberMoney Aggregate created successfully: " + createResult);
+                String newAggregateId = createResult.toString();
+                
+                // DB에 aggregateIdentifier 업데이트
+                memberMoneyJpaEntity.setAggregateIdentifier(newAggregateId);
+                
+                // IncreaseMemberMoneyCommand 전송
+                sendIncreaseMoneyCommandAfterCreate(newAggregateId, command);
+            }
+        });
+    }
+
+    private void sendIncreaseMoneyCommand(String aggregateIdentifier, MemberMoneyJpaEntity memberMoneyJpaEntity, IncreaseMoneyRequestCommand command) {
+        commandGateway.send(IncreaseMemberMoneyCommand.builder()
+                .aggregateIdentifier(aggregateIdentifier)
+                .membershipId(command.getTargetMembershipId())
+                .amount(command.getAmount())
+                .build())
+        .whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                // Event Store에 Aggregate가 없는 경우 자동으로 재생성
+                if (throwable.getCause() != null && 
+                    throwable.getCause().getMessage() != null &&
+                    throwable.getCause().getMessage().contains("not found in the event store")) {
+                    
+                    System.err.println("Aggregate not found in Event Store. Recreating...");
+                    // aggregateIdentifier를 null로 설정하고 재생성
+                    memberMoneyJpaEntity.setAggregateIdentifier(null);
+                    createAggregateAndIncrease(memberMoneyJpaEntity, command);
+                } else {
+                    System.err.println("Failed to increase money");
+                    throwable.printStackTrace();
+                    throw new RuntimeException("Failed to increase money", throwable);
+                }
+            } else {
+                System.out.println("Money increased successfully: " + result);
+                increaseMoneyPort.increaseMoney(
+                        new MemberMoney.MembershipId(command.getTargetMembershipId()),
+                        command.getAmount()
+                );
+            }
+        });
+    }
+
+    private void sendIncreaseMoneyCommandAfterCreate(String aggregateIdentifier, IncreaseMoneyRequestCommand command) {
+        commandGateway.send(IncreaseMemberMoneyCommand.builder()
+                .aggregateIdentifier(aggregateIdentifier)
+                .membershipId(command.getTargetMembershipId())
+                .amount(command.getAmount())
+                .build())
+        .whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                System.err.println("Failed to increase money after creating aggregate");
+                throwable.printStackTrace();
+                throw new RuntimeException("Failed to increase money after creating aggregate", throwable);
+            } else {
+                System.out.println("Money increased successfully after creating aggregate: " + result);
+                increaseMoneyPort.increaseMoney(
+                        new MemberMoney.MembershipId(command.getTargetMembershipId()),
+                        command.getAmount()
+                );
+            }
+        });
     }
 }

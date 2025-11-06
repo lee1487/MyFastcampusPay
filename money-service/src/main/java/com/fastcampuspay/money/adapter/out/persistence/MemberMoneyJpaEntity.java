@@ -19,10 +19,13 @@ public class MemberMoneyJpaEntity {
     private Long memberMoneyId;
     private String membershipId;
     private int balance;
+    private String aggregateIdentifier;
 
-    public MemberMoneyJpaEntity(String membershipId, int balance) {
+
+    public MemberMoneyJpaEntity(String membershipId, int balance, String aggregateIdentifier) {
         this.membershipId = membershipId;
         this.balance = balance;
+        this.aggregateIdentifier = aggregateIdentifier;
     }
 
     @Override

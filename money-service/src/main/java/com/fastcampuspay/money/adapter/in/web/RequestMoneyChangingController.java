@@ -1,10 +1,7 @@
 package com.fastcampuspay.money.adapter.in.web;
 
 import com.fastcampuspay.common.WebAdapter;
-import com.fastcampuspay.money.application.port.in.DecreaseMoneyRequestCommand;
-import com.fastcampuspay.money.application.port.in.DecreaseMoneyRequestUseCase;
-import com.fastcampuspay.money.application.port.in.IncreaseMoneyRequestCommand;
-import com.fastcampuspay.money.application.port.in.IncreaseMoneyRequestUseCase;
+import com.fastcampuspay.money.application.port.in.*;
 import com.fastcampuspay.money.domain.MoneyChangingRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class RequestMoneyChangingController {
     private final IncreaseMoneyRequestUseCase increaseMoneyRequestUseCase;
     private final DecreaseMoneyRequestUseCase decreaseMoneyRequestUseCase;
+    private final CreateMemberMoneyUseCase createMemberMoneyUseCase;
 
     @PostMapping(path = "/money/increase")
     MoneyChangingResultDetail increseMoneyChangingRequest(@RequestBody IncreaseMoneyChangingRequest request) {
@@ -52,6 +50,25 @@ public class RequestMoneyChangingController {
         MoneyChangingRequest moneyChangingRequest = increaseMoneyRequestUseCase.increaseMoneyRequestAsync(command);
 
         return MoneyChangingResultDetail.mapFromMoneyChangingRequest(moneyChangingRequest);
+    }
+
+    @PostMapping(path = "/money/create-member-money")
+    void createMemberMoney (@RequestBody CreateMemberMoneyRequest request) {
+        createMemberMoneyUseCase.createMemberMoney(
+                CreateMemberMoneyCommand.builder()
+                        .membershipId(request.getMembershipId())
+                        .build()
+        );
+    }
+
+    @PostMapping(path = "/money/increase-eda")
+    void increaeMoneyChangingRequestByEvent (@RequestBody IncreaseMoneyChangingRequest request) {
+        IncreaseMoneyRequestCommand command = IncreaseMoneyRequestCommand.builder()
+                .targetMembershipId(request.getTargetMembershipId())
+                .amount(request.getAmount())
+                .build();
+
+        increaseMoneyRequestUseCase.increaseMoneyRequestByEvent(command);
     }
 
 

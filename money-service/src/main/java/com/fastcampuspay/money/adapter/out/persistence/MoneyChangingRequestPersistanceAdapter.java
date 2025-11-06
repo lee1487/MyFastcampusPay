@@ -50,7 +50,8 @@ public class MoneyChangingRequestPersistanceAdapter implements IncreaseMoneyPort
             // 회원 잔액 정보가 없으면 새로 생성
             entity = new MemberMoneyJpaEntity(
                     membershipId.getMembershipId(),
-                    increaseMoneyAmount
+                    increaseMoneyAmount,
+                    ""
             );
         } else {
             // 기존 잔액에 증액
@@ -94,7 +95,8 @@ public class MoneyChangingRequestPersistanceAdapter implements IncreaseMoneyPort
             // 회원 잔액 정보가 없으면 음수 잔액으로 생성 (비즈니스 로직에 따라 예외 처리 필요할 수 있음)
             entity = new MemberMoneyJpaEntity(
                     membershipId.getMembershipId(),
-                    -decreaseMoneyAmount
+                    -decreaseMoneyAmount,
+                    ""
             );
         } else {
             // 기존 잔액에서 차감
