@@ -2,6 +2,7 @@ package com.fastcampuspay.banking.adapter.in.web;
 
 import com.fastcampuspay.banking.application.port.in.FirmbankingRequestUseCase;
 import com.fastcampuspay.banking.application.port.in.FirmbankingRequestCommand;
+import com.fastcampuspay.banking.application.port.in.RequestFirmbankingCommand;
 import com.fastcampuspay.banking.domain.FirmbankingRequest;
 import com.fastcampuspay.common.WebAdapter;
 import lombok.RequiredArgsConstructor;
@@ -26,5 +27,18 @@ public class RequestFirmbankingController {
                 .build();
 
         return requestFirmbankingUseCase.requestFirmbanking(command);
+    }
+
+    @PostMapping(path = "/banking/firmbanking/request-eda")
+    void requestFirmbankingByEvent(@RequestBody RequestFirmbankingRequest request) {
+        RequestFirmbankingCommand command = RequestFirmbankingCommand.builder()
+                .toBankName(request.getToBankName())
+                .toBankAccountNumber(request.getToBankAccountNumber())
+                .fromBankName(request.getFromBankName())
+                .fromBankAccountNumber(request.getFromBankAccountNumber())
+                .moneyAmount(request.getMoneyAmount())
+                .build();
+
+        requestFirmbankingUseCase.requestFirmbankingByEvent(command);
     }
 }

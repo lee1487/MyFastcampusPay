@@ -15,8 +15,10 @@ public interface FirmbankingRequestPort {
             FirmbankingRequest.ToBankAccountNumber toBankAccountNumber,
             FirmbankingRequest.MoneyAmount moneyAmount,
             FirmbankingRequest.FirmbankingStatus firmbankingStatus,
-            UUID uuid
+            UUID uuid,
+            FirmbankingRequest.FirmbankingAggregateIdentifier aggregateIdentifier
     );
 
     FirmbankingRequestJpaEntity modifyFirmbankingRequest(FirmbankingRequestJpaEntity jpaEntity);
+    FirmbankingRequestJpaEntity findFirmbankingRequest(FirmbankingRequest.FirmbankingRequestId firmbankingRequestId);
 }

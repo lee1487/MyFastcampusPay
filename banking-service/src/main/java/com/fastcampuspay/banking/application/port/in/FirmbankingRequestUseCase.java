@@ -4,4 +4,5 @@ import com.fastcampuspay.banking.domain.FirmbankingRequest;
 
 public interface FirmbankingRequestUseCase {
     FirmbankingRequest requestFirmbanking(FirmbankingRequestCommand command);
+    void requestFirmbankingByEvent(RequestFirmbankingCommand command);
 }
